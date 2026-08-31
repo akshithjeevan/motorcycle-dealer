@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #FFFFFF;
+  --color-secondary-bg: #F8F9FA;
+  --color-card-bg: #FFFFFF;
+  --color-border-custom: #ECECEC;
+  --color-text-primary: #1E1E1E;
+  --color-text-secondary: #6B7280;
+  --color-btn-primary: #183153;
+  --color-accent: #C8A96A;
+  --color-accent-hover: #A88945;
+  --color-success: #16A34A;
+  
+  --font-inter: var(--font-inter);
+  --font-manrope: var(--font-manrope);
+  --font-dmsans: var(--font-dmsans);
+  
+  --font-sans: var(--font-inter), sans-serif;
+  --font-heading: var(--font-manrope), sans-serif;
+}
+
+:root {
+  --background: #FFFFFF;
+  --foreground: #1E1E1E;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F8F9FA;
+}
+::-webkit-scrollbar-thumb {
+  background: #C8A96A;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A88945;
+}
+
+/* Custom Animations and UI Elements */
+.glassmorphism {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.glassmorphism-dark {
+  background: rgba(24, 49, 83, 0.03);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.custom-underline {
+  position: relative;
+}
+
+.custom-underline::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 1px;
+  bottom: -4px;
+  left: 0;
+  background-color: #C8A96A;
+  transform-origin: bottom right;
+  transition: transform 0.3s ease-out;
+}
+
+.custom-underline:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
+/* Remove default focus outlines but add sleek focus states */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #C8A96A;
+  box-shadow: 0 0 0 2px rgba(200, 169, 106, 0.1);
+}
