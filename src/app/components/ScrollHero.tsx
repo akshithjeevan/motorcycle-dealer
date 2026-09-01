@@ -1,351 +1,127 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
-import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
-
-const totalFrames = 166;
-const frameUrl = (index: number) =>
-  `/images/hero-section/ezgif-frame-${String(index).padStart(3, '0')}.png`;
-
-const scenes = [
-  {
-    id: 1,
-    headline: 'Precision Engineering',
-    subtext: 'Craftsmanship that keeps every ride performing at its best.',
-    start: 0.0,
-    end: 0.15,
-  },
-  {
-    id: 2,
-    headline: 'Certified Technicians',
-    subtext: 'Experienced specialists for premium motorcycles.',
-    start: 0.18,
-    end: 0.33,
-  },
-  {
-    id: 3,
-    headline: 'Advanced Diagnostics',
-    subtext: 'Dealer-grade tools for accurate troubleshooting.',
-    start: 0.36,
-    end: 0.51,
-  },
-  {
-    id: 4,
-    headline: 'Performance Tuning',
-    subtext: 'Unlock smoother, stronger, and more responsive performance.',
-    start: 0.54,
-    end: 0.69,
-  },
-  {
-    id: 5,
-    headline: 'Premium Detailing',
-    subtext: 'Restore showroom-quality finishes.',
-    start: 0.72,
-    end: 0.87,
-  },
-  {
-    id: 6,
-    headline: 'Ride With Confidence',
-    subtext: 'Every motorcycle leaves after a comprehensive quality inspection.',
-    start: 0.90,
-    end: 1.0,
-  },
-];
+import React from 'react';
+import { motion } from 'framer-motion';
+import { ArrowRight, Wrench, ShieldCheck, Cpu, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 
 export default function ScrollHero() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imagesRef = useRef<(HTMLImageElement | null)[]>(new Array(totalFrames).fill(null));
-  const [isFirstFrameLoaded, setIsFirstFrameLoaded] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(0);
-
-  // Track scroll progress of the entire sticky container height
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ['start start', 'end end'],
-  });
-
-  // Smooth scroll progression using a spring
-  const smoothProgress = useSpring(scrollYProgress, {
-    damping: 30,
-    stiffness: 100,
-    mass: 0.5,
-  });
-
-  // Image scaling transform
-  const scale = useTransform(smoothProgress, [0, 1], [1, 1.05]);
-
-  // Staggered Preloading Strategy for instant performance
-  useEffect(() => {
-    let loadedCount = 0;
-    const totalCount = totalFrames;
-
-    const onProgress = () => {
-      loadedCount++;
-      setLoadingProgress(Math.floor((loadedCount / totalCount) * 100));
-    };
-
-    const loadImage = (index: number): Promise<void> => {
-      return new Promise((resolve) => {
-        if (imagesRef.current[index - 1]) {
-          resolve();
-          return;
-        }
-        const img = new Image();
-        img.src = frameUrl(index);
-        img.onload = () => {
-          imagesRef.current[index - 1] = img;
-          onProgress();
-          if (index === 1) setIsFirstFrameLoaded(true);
-          resolve();
-        };
-        img.onerror = () => {
-          onProgress();
-          resolve();
-        };
-      });
-    };
-
-    const startPreload = async () => {
-      // 1. Priority Step: Load Frame 1 immediately so hero renders instantly
-      await loadImage(1);
-
-      // 2. Pass 1 (Keyframes): Load every 4th frame (1, 5, 9, 13...) for fast scroll readiness
-      const keyframeIndices: number[] = [];
-      for (let i = 1; i <= totalFrames; i += 4) {
-        keyframeIndices.push(i);
-      }
-      await Promise.all(keyframeIndices.map((idx) => loadImage(idx)));
-
-      // 3. Pass 2 (Intermediate frames): Fill in all remaining missing frames in background
-      const remainingIndices: number[] = [];
-      for (let i = 1; i <= totalFrames; i++) {
-        if (!imagesRef.current[i - 1]) {
-          remainingIndices.push(i);
-        }
-      }
-      // Load remaining in small concurrent batches of 10 to preserve network responsiveness
-      const batchSize = 10;
-      for (let i = 0; i < remainingIndices.length; i += batchSize) {
-        const batch = remainingIndices.slice(i, i + batchSize);
-        await Promise.all(batch.map((idx) => loadImage(idx)));
-      }
-    };
-
-    startPreload();
-  }, []);
-
-  // Draw frame on canvas based on scroll position
-  useEffect(() => {
-    if (!canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    if (!context) return;
-
-    const getNearestImage = (targetIndex: number): HTMLImageElement | null => {
-      const images = imagesRef.current;
-      if (images[targetIndex]) return images[targetIndex];
-
-      // Search outward from target index for closest loaded frame
-      let radius = 1;
-      while (targetIndex - radius >= 0 || targetIndex + radius < totalFrames) {
-        if (targetIndex - radius >= 0 && images[targetIndex - radius]) {
-          return images[targetIndex - radius];
-        }
-        if (targetIndex + radius < totalFrames && images[targetIndex + radius]) {
-          return images[targetIndex + radius];
-        }
-        radius++;
-      }
-      return null;
-    };
-
-    const renderFrame = (progress: number) => {
-      const frameIndex = Math.min(
-        totalFrames - 1,
-        Math.max(0, Math.floor(progress * (totalFrames - 1)))
-      );
-
-      const image = getNearestImage(frameIndex);
-      if (!image) return;
-
-      // Clear canvas
-      context.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Handle object-fit cover math for canvas
-      const imgWidth = image.width;
-      const imgHeight = image.height;
-      const canvasWidth = canvas.width;
-      const canvasHeight = canvas.height;
-
-      const imgRatio = imgWidth / imgHeight;
-      const canvasRatio = canvasWidth / canvasHeight;
-
-      let drawWidth = canvasWidth;
-      let drawHeight = canvasHeight;
-      let offsetX = 0;
-      let offsetY = 0;
-
-      if (imgRatio > canvasRatio) {
-        drawWidth = canvasHeight * imgRatio;
-        offsetX = (canvasWidth - drawWidth) / 2;
-      } else {
-        drawHeight = canvasWidth / imgRatio;
-        offsetY = (canvasHeight - drawHeight) / 2;
-      }
-
-      context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
-    };
-
-    // Subscribed rendering function bound to the smooth physics spring
-    const unsubscribe = smoothProgress.on('change', (latest) => {
-      renderFrame(latest);
-    });
-
-    // Handle initial sizing and draw first frame
-    const handleResize = () => {
-      canvas.width = window.innerWidth * window.devicePixelRatio;
-      canvas.height = window.innerHeight * window.devicePixelRatio;
-      renderFrame(smoothProgress.get());
-    };
-
-    window.addEventListener('resize', handleResize);
-    handleResize();
-
-    // Trigger initial render when first frame arrives
-    if (isFirstFrameLoaded) {
-      renderFrame(smoothProgress.get());
-    }
-
-    return () => {
-      unsubscribe();
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [isFirstFrameLoaded, smoothProgress]);
-
-  // Transform for buttons fading out
-  const buttonOpacity = useTransform(smoothProgress, [0, 0.05], [1, 0]);
-  const buttonPointerEvents = useTransform(smoothProgress, [0, 0.05], ['auto', 'none'] as any);
-
   return (
-    <div ref={containerRef} className="relative h-[500vh] bg-black">
-      {/* Sticky Screen Viewport */}
-      <div className="sticky top-0 w-full h-screen overflow-hidden bg-black select-none">
-        {/* Canvas Frame Renderer */}
-        <motion.div style={{ scale }} className="absolute inset-0 w-full h-full">
-          <canvas ref={canvasRef} className="w-full h-full object-cover block" />
-        </motion.div>
+    <section className="relative w-full h-screen min-h-[650px] bg-black overflow-hidden flex items-center justify-center select-none">
+      {/* Background Video */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover scale-105"
+      >
+        <source src="/videos/Video%20Project%2016.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
 
-        {/* Elegant Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40 pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(0,0,0,0.6))] pointer-events-none" />
+      {/* Cinematic Gradient Overlays */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/30 to-black/80 pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(0,0,0,0.7)_100%)] pointer-events-none" />
 
-        {/* Cinematic Scroll Indicator */}
+      {/* Hero Content */}
+      <div className="relative z-20 max-w-[1440px] mx-auto px-6 md:px-12 w-full pt-16 flex flex-col items-center text-center">
+        {/* Badge */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: isFirstFrameLoaded ? 1 : 0 }}
-          style={{ opacity: useTransform(smoothProgress, [0, 0.95], [1, 0]) }}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none z-30"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/15 mb-6"
         >
-          <span className="text-[10px] uppercase tracking-[0.25em] text-white/50 font-sans font-semibold">
-            Scroll to Explore
+          <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+          <span className="text-xs font-bold text-white/90 uppercase tracking-widest font-sans">
+            Elite Engineering & Pre-Owned Workshop
           </span>
-          <div className="w-5 h-9 rounded-full border border-white/20 flex justify-center p-1.5">
-            <motion.div
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-              className="w-1.5 h-1.5 bg-accent rounded-full"
-            />
-          </div>
         </motion.div>
 
-        {/* Preloading Loader Screen (Only shown until Frame 1 is loaded, which happens in ~100ms) */}
-        {!isFirstFrameLoaded && (
-          <div className="absolute inset-0 bg-black z-50 flex flex-col items-center justify-center space-y-6">
-            <div className="w-10 h-10 rounded-full border border-accent flex items-center justify-center bg-white/5 animate-spin">
-              <span className="text-white font-heading font-bold text-xs tracking-wider">A</span>
-            </div>
-            <div className="flex flex-col items-center space-y-2">
-              <span className="text-xs font-bold text-accent uppercase tracking-widest">
-                AURA Motorsport
-              </span>
-              <span className="text-[10px] text-white/40 font-mono">
-                Initializing Experience...
-              </span>
+        {/* Main Headline */}
+        <motion.h1
+          initial={{ opacity: 0, y: 25 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="font-heading font-black text-4xl sm:text-6xl md:text-7xl text-white uppercase tracking-tight max-w-5xl leading-[1.1] drop-shadow-2xl"
+        >
+          Precision Engineering <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-red-600">
+            For High Performance
+          </span>
+        </motion.h1>
+
+        {/* Subtitle */}
+        <motion.p
+          initial={{ opacity: 0, y: 25 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+          className="font-sans text-base sm:text-lg md:text-xl text-gray-300 max-w-2xl mt-6 leading-relaxed font-light drop-shadow"
+        >
+          Master craftsmanship, dealer-grade diagnostics, and expert performance tuning to keep every motorcycle riding at its absolute peak.
+        </motion.p>
+
+        {/* CTA Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 25 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.6 }}
+          className="flex flex-col sm:flex-row gap-4 mt-8 w-full sm:w-auto"
+        >
+          <Link
+            href="/book-service"
+            className="inline-flex items-center justify-center px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-sans text-xs font-bold uppercase tracking-widest rounded-full transition-all duration-300 shadow-xl shadow-red-600/30 hover:scale-105 active:scale-95"
+          >
+            Book Service Now
+          </Link>
+          <Link
+            href="/workshop"
+            className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 hover:border-white text-white font-sans text-xs font-bold uppercase tracking-widest rounded-full transition-all duration-300 hover:scale-105 active:scale-95"
+          >
+            Explore Services <ArrowRight className="w-4 h-4" />
+          </Link>
+        </motion.div>
+
+        {/* Highlights Bar at Bottom of Hero */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.8 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mt-14 pt-8 border-t border-white/10 w-full max-w-4xl"
+        >
+          <div className="flex items-center justify-center gap-3 text-left">
+            <Wrench className="w-5 h-5 text-red-600 shrink-0" />
+            <div>
+              <div className="text-sm font-bold text-white uppercase tracking-wider">Certified</div>
+              <div className="text-xs text-gray-400">Master Technicians</div>
             </div>
           </div>
-        )}
-
-        {/* Animated Storytelling Text Scenes */}
-        <div className="absolute inset-0 max-w-[1440px] mx-auto px-6 md:px-12 flex items-center justify-center text-center z-20">
-          {scenes.map((scene) => {
-            // Calculate opacity and translate-y transitions per scene based on spring progress
-            const opacity = useTransform(
-              smoothProgress,
-              [scene.start - 0.03, scene.start, scene.end, scene.end + 0.03],
-              [0, 1, 1, 0]
-            );
-
-            const y = useTransform(
-              smoothProgress,
-              [scene.start - 0.03, scene.start, scene.end, scene.end + 0.03],
-              [25, 0, 0, -25]
-            );
-
-            const blurVal = useTransform(
-              smoothProgress,
-              [scene.start - 0.03, scene.start, scene.end, scene.end + 0.03],
-              ['blur(10px)', 'blur(0px)', 'blur(0px)', 'blur(10px)']
-            );
-
-            return (
-              <motion.div
-                key={scene.id}
-                style={{ opacity, y, filter: blurVal }}
-                className="absolute max-w-3xl flex flex-col items-center space-y-6"
-              >
-                {scene.id === 1 && (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 w-fit mb-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
-                    <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest font-sans">
-                      Elite Engineering Workshop
-                    </span>
-                  </div>
-                )}
-                <h2 className="font-heading font-black text-4xl sm:text-5xl md:text-6xl text-white leading-tight tracking-tight uppercase">
-                  {scene.headline}
-                </h2>
-                <p className="font-sans text-base sm:text-lg md:text-xl text-white/70 max-w-xl leading-relaxed">
-                  {scene.subtext}
-                </p>
-
-                {/* CTA Buttons in the first scene */}
-                {scene.id === 1 && (
-                  <motion.div
-                    style={{ opacity: buttonOpacity, pointerEvents: buttonPointerEvents as any }}
-                    className="flex flex-col sm:flex-row gap-4 pt-6"
-                  >
-                    <a
-                      href="#booking"
-                      className="inline-flex items-center justify-center px-8 py-3.5 bg-accent hover:bg-accent-hover text-white font-sans text-xs font-bold uppercase tracking-widest rounded-full transition-all duration-300 shadow-xl shadow-accent/20"
-                    >
-                      Book Service
-                    </a>
-                    <a
-                      href="#services"
-                      className="inline-flex items-center justify-center gap-2 px-8 py-3.5 border border-white/20 hover:border-white text-white font-sans text-xs font-bold uppercase tracking-widest rounded-full transition-all duration-300 hover:bg-white/5"
-                    >
-                      Explore Services <ArrowRight className="w-4 h-4" />
-                    </a>
-                  </motion.div>
-                )}
-              </motion.div>
-            );
-          })}
-        </div>
+          <div className="flex items-center justify-center gap-3 text-left">
+            <Cpu className="w-5 h-5 text-red-600 shrink-0" />
+            <div>
+              <div className="text-sm font-bold text-white uppercase tracking-wider">Diagnostics</div>
+              <div className="text-xs text-gray-400">Dealer-Grade Tools</div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center gap-3 text-left">
+            <ShieldCheck className="w-5 h-5 text-red-600 shrink-0" />
+            <div>
+              <div className="text-sm font-bold text-white uppercase tracking-wider">Warranty</div>
+              <div className="text-xs text-gray-400">100% Guaranteed</div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center gap-3 text-left">
+            <Sparkles className="w-5 h-5 text-red-600 shrink-0" />
+            <div>
+              <div className="text-sm font-bold text-white uppercase tracking-wider">Detailing</div>
+              <div className="text-xs text-gray-400">Showroom Finish</div>
+            </div>
+          </div>
+        </motion.div>
       </div>
-    </div>
+    </section>
   );
 }
+
