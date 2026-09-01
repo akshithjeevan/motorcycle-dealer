@@ -25,7 +25,7 @@ export default function Footer() {
 
           <div className="flex items-center gap-3 pt-2">
             <a
-              href="https://wa.me/919876543210"
+              href="https://wa.me/916238392582"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition"
@@ -78,7 +78,7 @@ export default function Footer() {
             </div>
             <div className="flex items-center gap-2.5">
               <Phone className="w-4 h-4 text-red-500 flex-shrink-0" />
-              <span>+91 98765 43210 / +91 98765 43211</span>
+              <span>+91 62383 92582</span>
             </div>
             <div className="flex items-center gap-2.5">
               <Mail className="w-4 h-4 text-red-500 flex-shrink-0" />

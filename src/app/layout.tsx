@@ -33,6 +33,8 @@ export const metadata: Metadata = {
   },
 };
 
+import WhatsAppButton from "@/app/components/WhatsAppButton";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -44,7 +46,10 @@ export default function RootLayout({
       className={`${inter.variable} ${manrope.variable} ${dmSans.variable} h-full antialiased scroll-smooth`}
     >
       <body className="min-h-full flex flex-col bg-white text-text-primary">
-        <BikeProvider>{children}</BikeProvider>
+        <BikeProvider>
+          {children}
+          <WhatsAppButton />
+        </BikeProvider>
       </body>
     </html>
   );

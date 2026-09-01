@@ -122,7 +122,7 @@ export default function Navbar() {
 
           {/* Contact Direct */}
           <a
-            href="tel:+919876543210"
+            href="tel:+916238392582"
             className={`flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg ${
               isScrolled || pathname !== '/'
                 ? 'text-gray-700 hover:bg-gray-100'
@@ -130,7 +130,7 @@ export default function Navbar() {
             }`}
           >
             <Phone className="w-4 h-4 text-red-600" />
-            <span>+91 98765 43210</span>
+            <span>+91 62383 92582</span>
           </a>
 
           {/* Book Test Ride Button */}
@@ -230,7 +230,7 @@ export default function Navbar() {
               Browse Inventory
             </Link>
             <a
-              href="https://wa.me/919876543210"
+              href="https://wa.me/916238392582"
               target="_blank"
               rel="noreferrer"
               className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl active:scale-[0.98] transition"
