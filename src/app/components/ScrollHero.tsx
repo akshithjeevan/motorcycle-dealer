@@ -27,6 +27,19 @@ export default function ScrollHero() {
 
       {/* Hero Content */}
       <div className="relative z-20 max-w-[1440px] mx-auto px-6 md:px-12 w-full pt-16 flex flex-col items-center text-center">
+        {/* Badge */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-none bg-white/10 backdrop-blur-md border border-white/15 mb-6"
+        >
+          <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+          <span className="text-xs font-bold text-white/90 uppercase tracking-widest font-sans">
+            Elite Engineering & Pre-Owned Workshop
+          </span>
+        </motion.div>
+
         {/* Main Headline */}
         <motion.h1
           initial={{ opacity: 0, y: 25 }}
