@@ -56,8 +56,8 @@ const scenes = [
 export default function ScrollHero() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [images, setImages] = useState<HTMLImageElement[]>([]);
-  const [imagesLoaded, setImagesLoaded] = useState(false);
+  const imagesRef = useRef<(HTMLImageElement | null)[]>(new Array(totalFrames).fill(null));
+  const [isFirstFrameLoaded, setIsFirstFrameLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
   // Track scroll progress of the entire sticky container height
@@ -76,45 +76,99 @@ export default function ScrollHero() {
   // Image scaling transform
   const scale = useTransform(smoothProgress, [0, 1], [1, 1.05]);
 
-  // Preload frames
+  // Staggered Preloading Strategy for instant performance
   useEffect(() => {
     let loadedCount = 0;
-    const loadedImages: HTMLImageElement[] = [];
+    const totalCount = totalFrames;
 
-    const handleImageLoad = () => {
+    const onProgress = () => {
       loadedCount++;
-      setLoadingProgress(Math.floor((loadedCount / totalFrames) * 100));
-      if (loadedCount === totalFrames) {
-        setImages(loadedImages);
-        setImagesLoaded(true);
+      setLoadingProgress(Math.floor((loadedCount / totalCount) * 100));
+    };
+
+    const loadImage = (index: number): Promise<void> => {
+      return new Promise((resolve) => {
+        if (imagesRef.current[index - 1]) {
+          resolve();
+          return;
+        }
+        const img = new Image();
+        img.src = frameUrl(index);
+        img.onload = () => {
+          imagesRef.current[index - 1] = img;
+          onProgress();
+          if (index === 1) setIsFirstFrameLoaded(true);
+          resolve();
+        };
+        img.onerror = () => {
+          onProgress();
+          resolve();
+        };
+      });
+    };
+
+    const startPreload = async () => {
+      // 1. Priority Step: Load Frame 1 immediately so hero renders instantly
+      await loadImage(1);
+
+      // 2. Pass 1 (Keyframes): Load every 4th frame (1, 5, 9, 13...) for fast scroll readiness
+      const keyframeIndices: number[] = [];
+      for (let i = 1; i <= totalFrames; i += 4) {
+        keyframeIndices.push(i);
+      }
+      await Promise.all(keyframeIndices.map((idx) => loadImage(idx)));
+
+      // 3. Pass 2 (Intermediate frames): Fill in all remaining missing frames in background
+      const remainingIndices: number[] = [];
+      for (let i = 1; i <= totalFrames; i++) {
+        if (!imagesRef.current[i - 1]) {
+          remainingIndices.push(i);
+        }
+      }
+      // Load remaining in small concurrent batches of 10 to preserve network responsiveness
+      const batchSize = 10;
+      for (let i = 0; i < remainingIndices.length; i += batchSize) {
+        const batch = remainingIndices.slice(i, i + batchSize);
+        await Promise.all(batch.map((idx) => loadImage(idx)));
       }
     };
 
-    for (let i = 1; i <= totalFrames; i++) {
-      const img = new Image();
-      img.src = frameUrl(i);
-      img.onload = handleImageLoad;
-      img.onerror = handleImageLoad; // Continue even if a frame fails
-      loadedImages.push(img);
-    }
+    startPreload();
   }, []);
 
   // Draw frame on canvas based on scroll position
   useEffect(() => {
-    if (!imagesLoaded || !canvasRef.current || images.length === 0) return;
+    if (!canvasRef.current) return;
 
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
     if (!context) return;
 
+    const getNearestImage = (targetIndex: number): HTMLImageElement | null => {
+      const images = imagesRef.current;
+      if (images[targetIndex]) return images[targetIndex];
+
+      // Search outward from target index for closest loaded frame
+      let radius = 1;
+      while (targetIndex - radius >= 0 || targetIndex + radius < totalFrames) {
+        if (targetIndex - radius >= 0 && images[targetIndex - radius]) {
+          return images[targetIndex - radius];
+        }
+        if (targetIndex + radius < totalFrames && images[targetIndex + radius]) {
+          return images[targetIndex + radius];
+        }
+        radius++;
+      }
+      return null;
+    };
+
     const renderFrame = (progress: number) => {
-      // Calculate current frame index (0 to totalFrames - 1)
       const frameIndex = Math.min(
         totalFrames - 1,
         Math.max(0, Math.floor(progress * (totalFrames - 1)))
       );
 
-      const image = images[frameIndex];
+      const image = getNearestImage(frameIndex);
       if (!image) return;
 
       // Clear canvas
@@ -160,11 +214,16 @@ export default function ScrollHero() {
     window.addEventListener('resize', handleResize);
     handleResize();
 
+    // Trigger initial render when first frame arrives
+    if (isFirstFrameLoaded) {
+      renderFrame(smoothProgress.get());
+    }
+
     return () => {
       unsubscribe();
       window.removeEventListener('resize', handleResize);
     };
-  }, [imagesLoaded, images, smoothProgress]);
+  }, [isFirstFrameLoaded, smoothProgress]);
 
   // Transform for buttons fading out
   const buttonOpacity = useTransform(smoothProgress, [0, 0.05], [1, 0]);
@@ -186,7 +245,7 @@ export default function ScrollHero() {
         {/* Cinematic Scroll Indicator */}
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: imagesLoaded ? 1 : 0 }}
+          animate={{ opacity: isFirstFrameLoaded ? 1 : 0 }}
           style={{ opacity: useTransform(smoothProgress, [0, 0.95], [1, 0]) }}
           className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none z-30"
         >
@@ -202,8 +261,8 @@ export default function ScrollHero() {
           </div>
         </motion.div>
 
-        {/* Preloading Loader Screen */}
-        {!imagesLoaded && (
+        {/* Preloading Loader Screen (Only shown until Frame 1 is loaded, which happens in ~100ms) */}
+        {!isFirstFrameLoaded && (
           <div className="absolute inset-0 bg-black z-50 flex flex-col items-center justify-center space-y-6">
             <div className="w-10 h-10 rounded-full border border-accent flex items-center justify-center bg-white/5 animate-spin">
               <span className="text-white font-heading font-bold text-xs tracking-wider">A</span>
@@ -213,7 +272,7 @@ export default function ScrollHero() {
                 AURA Motorsport
               </span>
               <span className="text-[10px] text-white/40 font-mono">
-                Preloading Experience {loadingProgress}%
+                Initializing Experience...
               </span>
             </div>
           </div>
